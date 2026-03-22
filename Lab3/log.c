@@ -99,28 +99,15 @@ int main(int argc, char *argv[])
     discovery_address.sin_family = AF_INET;
     discovery_address.sin_port = htons(8000);
     inet_pton(AF_INET, discovery_server_ip, &discovery_address.sin_addr);
-    while ((status = connect(discovery_fd, (struct sockaddr *)&discovery_address, sizeof(discovery_address))) == -1)
+    // TODO: Connect to the discovery server (use connect_until_success)
+    status = connect_until_success(discovery_fd, &discovery_address);
+    if (status != 0)
     {
-        if (errno != EINPROGRESS)
-        {
-            perror("connect failed");
-            close(server_fd);
-            close(discovery_fd);
-            free(public_ip);
-            return 1;
-        }
-        // Wait for the socket to become writable
-        fd_set write_fds;
-        FD_ZERO(&write_fds);
-        FD_SET(discovery_fd, &write_fds);
-        if (select(discovery_fd + 1, NULL, &write_fds, NULL, NULL) == -1)
-        {
-            perror("select failed");
-            close(server_fd);
-            close(discovery_fd);
-            free(public_ip);
-            return 1;
-        }
+        perror("connect failed");
+        close(server_fd);
+        close(discovery_fd);
+        free(public_ip);
+        return 1;
     }
     UserMessage register_msg = {0};
     // TODO: Initialize a UserMessage struct with the register opcode
@@ -203,26 +190,13 @@ int main(int argc, char *argv[])
     flags = fcntl(discovery_fd, F_GETFL, 0);
     fcntl(discovery_fd, F_SETFL, flags | O_NONBLOCK);
     // TODO: Connect to the discovery server (use connect_until_success)
-    while ((status = connect(discovery_fd, (struct sockaddr *)&discovery_address, sizeof(discovery_address))) == -1)
+    status = connect_until_success(discovery_fd, &discovery_address);
+    if (status != 0)
     {
-        if (errno != EINPROGRESS)
-        {
-            perror("connect failed");
-            close(discovery_fd);
-            free(public_ip);
-            return 1;
-        }
-        // Wait for the socket to become writable
-        fd_set write_fds;
-        FD_ZERO(&write_fds);
-        FD_SET(discovery_fd, &write_fds);
-        if (select(discovery_fd + 1, NULL, &write_fds, NULL, NULL) == -1)
-        {
-            perror("select failed");
-            close(discovery_fd);
-            free(public_ip);
-            return 1;
-        }
+        perror("connect failed");
+        close(discovery_fd);
+        free(public_ip);
+        return 1;
     }
     UserMessage deregister_msg = {0};
     // TODO: Initialize a UserMessage struct with the deregister opcode

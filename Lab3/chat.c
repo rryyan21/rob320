@@ -59,26 +59,13 @@ int main(int argc, char *argv[])
 
     int status;
     // TODO: Connect to the discovery server (use connect_until_success)
-    while ((status = connect(discovery_fd, (struct sockaddr *)&discovery_address, sizeof(discovery_address))) == -1)
+    status = connect_until_success(discovery_fd, &discovery_address);
+    if (status != 0)
     {
-        if (errno != EINPROGRESS)
-        {
-            perror("connect failed");
-            close(discovery_fd);
-            free(public_ip);
-            return 1;
-        }
-        // Wait for the socket to become writable
-        fd_set write_fds;
-        FD_ZERO(&write_fds);
-        FD_SET(discovery_fd, &write_fds);
-        if (select(discovery_fd + 1, NULL, &write_fds, NULL, NULL) == -1)
-        {
-            perror("select failed");
-            close(discovery_fd);
-            free(public_ip);
-            return 1;
-        }
+        perror("connect failed");
+        close(discovery_fd);
+        free(public_ip);
+        return 1;
     }
     UserMessage request_msg = {0};
     // TODO: Initialize a UserMessage struct with the request opcode
@@ -172,7 +159,11 @@ int main(int argc, char *argv[])
     fgets(buffer, sizeof(buffer), stdin);
 
     size_t len = strlen(buffer);
-    buffer[len - 1] = '\0';
+    // Only remove newline if it exists
+    if (len > 0 && buffer[len - 1] == '\n')
+    {
+        buffer[len - 1] = '\0';
+    }
 
     ChatMessage chat_msg = {0};
     // TODO: Initialize a ChatMessage struct with the user's name, message, and timestamp in microseconds
